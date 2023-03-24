@@ -8,11 +8,26 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 //import org.springframework.security.web.SecurityFilterChain;
 
+import javax.sql.DataSource;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
+import org.springframework.security.provisioning.JdbcUserDetailsManager;
+
+
 @Configuration
 public class BasicAuthSecurityConfig {
 
 	@Bean
-	public UserDetailsService usrDtlServ() {
+	public DataSource dSource() {
+		return new EmbeddedDatabaseBuilder()
+					.setType(EmbeddedDatabaseType.H2)
+					.addScript(JdbcDaoImpl.DEFAULT_USER_SCHEMA_DDL_LOCATION)
+					.build();
+	}
+	
+	@Bean
+	public UserDetailsService usrDtlServ(DataSource source) {
 
 		var user = User.builder().username("myusr")
 						.password("{noop}dummy")
@@ -22,6 +37,11 @@ public class BasicAuthSecurityConfig {
 						.password("{noop}dummy")
 						.roles("USER","ADMIN").build();
 
-		return new InMemoryUserDetailsManager(user,admin);
+		//return new InMemoryUserDetailsManager(user,admin);
+
+		var jdbcUserdetailsManager = new JdbcUserDetailsManager(source);
+		jdbcUserdetailsManager.createUser(admin);
+		jdbcUserdetailsManager.createUser(user);
+		return jdbcUserdetailsManager;
 	}
 }

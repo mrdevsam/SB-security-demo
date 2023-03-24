@@ -24,6 +24,10 @@ public class SecurityConfig {
 
 		//hhtp.formLogin();
 		http.httpBasic();
+
+		//enabling html frame options
+		http.headers().frameOptions().sameOrigin();
+		
 		http.csrf().disable();
 		return http.build();
 	}
