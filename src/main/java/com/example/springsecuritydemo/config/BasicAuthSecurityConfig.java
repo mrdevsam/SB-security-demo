@@ -2,6 +2,7 @@ package com.example.springsecuritydemo.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -30,11 +31,15 @@ public class BasicAuthSecurityConfig {
 	public UserDetailsService usrDtlServ(DataSource source) {
 
 		var user = User.builder().username("myusr")
-						.password("{noop}dummy")
+						//.password("{noop}dummy")
+						.password("dummy")
+						.passwordEncoder(str -> passwordEncoder().encode(str))
 						.roles("USER").build();
 
 		var admin = User.builder().username("admin")
-						.password("{noop}dummy")
+						//.password("{noop}dummy")
+						.password("dummy")
+						.passwordEncoder(str -> passwordEncoder().encode(str))
 						.roles("USER","ADMIN").build();
 
 		//return new InMemoryUserDetailsManager(user,admin);
@@ -43,5 +48,10 @@ public class BasicAuthSecurityConfig {
 		jdbcUserdetailsManager.createUser(admin);
 		jdbcUserdetailsManager.createUser(user);
 		return jdbcUserdetailsManager;
+	}
+
+	@Bean
+	BCryptPasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 }
