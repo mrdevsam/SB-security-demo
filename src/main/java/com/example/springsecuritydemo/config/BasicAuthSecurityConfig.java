@@ -16,7 +16,7 @@ import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 
 
-@Configuration
+//@Configuration
 public class BasicAuthSecurityConfig {
 
 	@Bean
