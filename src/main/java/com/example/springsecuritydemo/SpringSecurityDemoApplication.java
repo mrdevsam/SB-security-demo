@@ -11,3 +11,37 @@ public class SpringSecurityDemoApplication {
 	}
 
 }
+
+// data model layer
+
+@Entity
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+class UserInfo{
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;
+	
+	private String name;
+	private String email;
+	private String password;
+	private String roles;
+}
+
+@Entity
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+class Product{
+
+	@Id
+	@GeneratedValue
+	private int id;
+	
+	private String name;
+	private int qnty;
+	private double price;
+}
+
