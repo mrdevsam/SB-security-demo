@@ -5,9 +5,22 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import lombok.*;
 import java.util.*;
+import java.util.stream.*;
 import jakarta.persistence.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.context.annotation.*;
+
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @SpringBootApplication
 public class SpringSecurityDemoApplication {
@@ -18,22 +31,50 @@ public class SpringSecurityDemoApplication {
 
 }
 
+// security configurations
+
+@Configuration
+@EnableMethodSecurity
+class SecurityConfig {
+
+	//authentication
+
+		@Bean
+	public InMemoryUserDetailsManager usrDtlMng() {
+	
+		var user = User.builder().username("myusr")
+					.password("dummy")
+					.passwordEncoder(str -> passwordEncoder().encode(str))
+					.roles("USER").build();
+	
+		var admin = User.builder().username("admin")
+					.password("dummy")
+					.passwordEncoder(str -> passwordEncoder().encode(str))
+					.roles("USER","ADMIN").build();
+					
+		return new InMemoryUserDetailsManager(user,admin);
+	}
+
+	@Bean
+	public SecurityFilterChain filterchain(HttpSecurity http) throws Exception {
+		return http
+			.csrf( c -> c.disable() )
+			.authorizeHttpRequests( auth -> auth.requestMatchers("/api/products/new").permitAll() )
+			.authorizeHttpRequests( auth -> auth.requestMatchers("/api/products/**").authenticated() )
+			.sessionManagement( session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.httpBasic(Customizer.withDefaults())
+			.build();
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+	
+}
+
 // data model layer
 
-@Entity
-@NoArgsConstructor
-@Data
-class UserInfo{
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int id;
-	
-	private String name;
-	private String email;
-	private String password;
-	private String roles;
-}
 
 @Entity
 @NoArgsConstructor
@@ -59,17 +100,13 @@ record ProductMask(String name, int quantity, double price) {}
 
 // repository layer
 
-interface UserInfoRepo extends JpaRepository<UserInfo, Integer> {
-	Optional<UserInfo> findByName(String username);
-}
-
 interface ProductRepo extends JpaRepository<Product, Integer> {
 }
 
 // controller layer
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api")
 class ProductController {
 
 	private final ProductRepo repo;
@@ -78,17 +115,20 @@ class ProductController {
 		this.repo = repo;
 	}
 
-	@GetMapping("/all")
+	@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+	@GetMapping("products/all")
 	public List<Product> allProducts() {
 		return repo.findAll();
 	}
 
-	@GetMapping("/find/{id}")
+	@PreAuthorize("hasAuthority('ROLE_USER')")
+	@GetMapping("products/find/{id}")
 	public Product findAProduct(@PathVariable Integer id) {
 		return repo.findById(id).orElseThrow( () -> new RuntimeException("product not found") );
 	}
 
-	@PostMapping("/new")
+	@PreAuthorize("hasAuthority('ROLE_USER')")
+	@PostMapping("products/new")
 	public Product createProduct(@RequestBody ProductMask product) {
 		if(product.name() != null) {
 			Product pdt = new Product(product.name(), product.quantity(), product.price());
@@ -98,7 +138,8 @@ class ProductController {
 		}
 	}
 
-	@PutMapping("/update/{id}")
+	@PreAuthorize("hasAuthority('ROLE_USER')")
+	@PutMapping("products/update/{id}")
 	public Product updateProduct(@PathVariable Integer id, @RequestBody ProductMask product) {
 		Product newPdct = repo.findById(id).orElseThrow( () -> new RuntimeException("product not found") );
 
@@ -109,8 +150,10 @@ class ProductController {
 		return repo.save(newPdct);
 	}
 
-	@DeleteMapping("/delete/{id}")
+	@PreAuthorize("hasAuthority('ROLE_USER')")
+	@DeleteMapping("products/delete/{id}")
 	public void deleteProduct(@PathVariable Integer id) {
 		repo.deleteById(id);
 	}
+
 }
